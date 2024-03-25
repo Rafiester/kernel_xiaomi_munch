@@ -938,8 +938,13 @@ int dwc3_core_init(struct dwc3 *dwc)
 
 	if (!dwc->ulpi_ready) {
 		ret = dwc3_core_ulpi_init(dwc);
-		if (ret)
+		if (ret) {
+			if (ret == -ETIMEDOUT) {
+				dwc3_core_soft_reset(dwc);
+				ret = -EPROBE_DEFER;
+			}
 			goto err0;
+		}
 		dwc->ulpi_ready = true;
 	}
 
@@ -1013,21 +1018,6 @@ int dwc3_core_init(struct dwc3 *dwc)
 		}
 
 		dwc3_writel(dwc->regs, DWC3_GUCTL1, reg);
-	}
-
-	if (dwc->dr_mode == USB_DR_MODE_HOST || dwc3_is_otg_or_drd(dwc)) {
-		reg = dwc3_readl(dwc->regs, DWC3_GUCTL);
-
-		/*
-		 * Enable Auto retry Feature to make the controller operating in
-		 * Host mode on seeing transaction errors(CRC errors or internal
-		 * overrun scenerios) on IN transfers to reply to the device
-		 * with a non-terminating retry ACK (i.e, an ACK transcation
-		 * packet with Retry=1 & Nump != 0)
-		 */
-		reg |= DWC3_GUCTL_HSTINAUTORETRY;
-
-		dwc3_writel(dwc->regs, DWC3_GUCTL, reg);
 	}
 
 	/*
@@ -1600,6 +1590,18 @@ skip_clk_reset:
 
 	pm_runtime_allow(dev);
 	dwc3_debugfs_init(dwc);
+<<<<<<< HEAD
+=======
+
+	ret = dwc3_core_init_mode(dwc);
+	if (ret)
+		goto err5;
+
+	pm_runtime_put(dev);
+
+	dma_set_max_seg_size(dev, UINT_MAX);
+
+>>>>>>> 08d0950cd1e0165da7971753e38b0ee575aeb9d4
 	return 0;
 
 err3:
@@ -1627,7 +1629,14 @@ static int dwc3_remove(struct platform_device *pdev)
 	struct dwc3	*dwc = platform_get_drvdata(pdev);
 
 	dwc3_debugfs_exit(dwc);
+<<<<<<< HEAD
 	dwc3_gadget_exit(dwc);
+=======
+
+	dwc3_core_exit(dwc);
+	dwc3_ulpi_exit(dwc);
+
+>>>>>>> 08d0950cd1e0165da7971753e38b0ee575aeb9d4
 	pm_runtime_allow(&pdev->dev);
 	pm_runtime_disable(&pdev->dev);
 
